@@ -27,10 +27,13 @@ func main() {
 
 	fmt.Println("arguments:", a)
 
-	gitLogArgs := fmt.Sprintf("log --merges --grep=\"Merge pull request\" --pretty=format:\"%s\" %s..%s", "%s", a[1], a[2])
-	fmt.Println(gitLogArgs)
+	// gitLogArgs := fmt.Sprintf("git log --merges --grep=\"Merge pull request\" --pretty=format:\"%s\" %s...%s", "%s", a[1], a[2])
+	// gitLogArgs := fmt.Sprintf("git log --pretty=format:\"%s\" %s...%s", "%s", a[1], a[2])
+	// fmt.Println(gitLogArgs)
 
-	c := exec.Command("git", gitLogArgs)
+	// gitLogArgs := ["log", "--pretty=format:\"%s\"", a[1]. "...", a[2]]string
+
+	c := exec.Command("git", "log", a[1], "...", a[2])
 	output, _ := c.CombinedOutput()
 
 	fmt.Println(string(output))
