@@ -7,16 +7,44 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+
+	"github.com/google/go-github/github"
+	"golang.org/x/oauth2"
 )
 
 const (
 	gc = "/usr/local/bin/git"
 )
 
+const (
+	gho = "vsco"
+	ghr = "image"
+	ght = "foo"
+)
+
 func main() {
 
-	var cmdLog string
 	var err error
+
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: ght},
+	)
+	tc := oauth2.NewClient(oauth2.NoContext, ts)
+
+	client := github.NewClient(tc)
+
+	pr, _, err := client.PullRequests.Get(gho, ghr, 50)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(*pr.Title)
+	fmt.Println(*pr.Body)
+
+	log.Fatal("Testing GitHub")
+	os.Exit(1)
+
+	var cmdLog string
 
 	// Set or get the current working directory
 	// wd, _ := os.Getwd()
