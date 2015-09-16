@@ -1,22 +1,27 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
+	"regexp"
 )
 
-// var cwd string
+const (
+	gc = "/usr/local/bin/git"
+)
 
 func main() {
 
-	wd, _ := os.Getwd()
-	fmt.Println(wd)
+	var cmdLog string
+	var err error
 
-	// r, err := git.OpenRepository(wd)
-	// if err != nil {
-	// 	log.Fatal("Could not open repository")
-	// }
+	// Set or get the current working directory
+	// wd, _ := os.Getwd()
+	wd := "/Users/lucas/Workspace/Work/vsco/image"
+	fmt.Println(wd)
 
 	a := os.Args
 
@@ -25,30 +30,60 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println("arguments:", a)
+	// Check to ensure we are in a git repo, if we are not, exit!
+	chkr := exec.Command(gc, "-C", wd, "status")
+	err = chkr.Run()
+	if err != nil {
+		cmdLog = fmt.Sprintf("%s is not a valid git repository! Exiting", wd)
+		log.Fatal(cmdLog)
+	}
 
-	// gitLogArgs := fmt.Sprintf("git log --merges --grep=\"Merge pull request\" --pretty=format:\"%s\" %s...%s", "%s", a[1], a[2])
-	// gitLogArgs := fmt.Sprintf("git log --pretty=format:\"%s\" %s...%s", "%s", a[1], a[2])
-	// fmt.Println(gitLogArgs)
+	// Output what we are about to do
+	cmdLog = fmt.Sprintf("Determining merged branches between the following hashes: %s %s", a[1], a[2])
+	fmt.Println(cmdLog)
 
-	// gitLogArgs := ["log", "--pretty=format:\"%s\"", a[1]. "...", a[2]]string
+	// Determine the merged branches between the two hashes
+	c := exec.Command(gc, "-C", wd, "log", "--merges", "--pretty=format:\"%s\"", a[1]+"..."+a[2])
 
-	c := exec.Command("git", "log", a[1], "...", a[2])
-	output, _ := c.CombinedOutput()
+	out, err := c.StdoutPipe()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	fmt.Println(string(output))
+	err = c.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// refA, err := r.GetCommit(a[1])
-	// if err != nil {
-	// 	log.Fatal(a[1] + "not a valid hash")
-	// }
-	// refB, err := r.GetCommit(a[2])
-	// if err != nil {
-	// 	log.Fatal(a[2] + "not a valid hash")
-	// }
+	// iteratre through matcthes, and pull out the issues id into a slice
+	var ids []string
 
-	// fmt.Println(refA.Message())
-	// fmt.Println(refB.Message())
+	s := bufio.NewScanner(out)
+	for s.Scan() {
+		t := s.Text()
+		fmt.Println(t)
+		r, _ := regexp.Compile("#([0-9]+)")
+		sm := r.FindStringSubmatch(t)
+		ids = append(ids, sm[1])
+	}
+	err = c.Wait()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// if the list is empty, error out
+	if len(ids) == 0 {
+		cmdLog = fmt.Sprintf("No merged PRs / GH issues found between: %s %s", a[1], a[2])
+		log.Fatal(cmdLog)
+	}
+
+	// curl github api to get the contents of the PR
+
+	// pull out a lot of values, content, name
+
+	// push output into an array
+
+	// notify slack
 }
 
 const usage = `
