@@ -6,47 +6,68 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"strconv"
 
+	"github.com/fatih/color"
 	"github.com/google/go-github/github"
+	"github.com/rodaine/table"
 	"golang.org/x/oauth2"
 )
 
 const (
-	gc = "/usr/local/bin/git"
+	gc       = "git"
+	tokenVar = "MPR_GITHUB_TOKEN"
+	wd       = "/Users/lucas/Workspace/Work/vsco/image"
 )
 
 const (
 	gho = "vsco"
-	ghr = "image"
-	ght = "foo"
 )
 
 func main() {
 
 	var err error
-
-	ts := oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: ght},
-	)
-	tc := oauth2.NewClient(oauth2.NoContext, ts)
-
-	client := github.NewClient(tc)
-
 	var cmdLog string
+
+	// Get token configuration
+	ght := os.Getenv(tokenVar)
+	if ght == "" {
+		cmdLog = fmt.Sprintf("GitHub token missing, please set %s", tokenVar)
+		log.Fatal(cmdLog)
+	}
 
 	// Set or get the current working directory
 	// wd, _ := os.Getwd()
-	wd := "/Users/lucas/Workspace/Work/vsco/image"
-	fmt.Println(wd)
+	repo := path.Base(wd)
 
+	// ensure enough arguments were passed
 	a := os.Args
-
 	if len(a) <= 2 {
 		showUsage()
 		os.Exit(1)
 	}
+
+	// Determine that Git is installed
+	gchk := exec.Command(gc, "--version")
+	err = gchk.Run()
+	if err != nil {
+		cmdLog = fmt.Sprintf("%s is not a valid git application, exiting.", gc)
+		log.Fatal(cmdLog)
+	}
+
+	// Auth with GitHub
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: ght},
+	)
+	tc := oauth2.NewClient(oauth2.NoContext, ts)
+	client := github.NewClient(tc)
+
+	// define table output
+	columnFmt := color.New(color.FgYellow).SprintfFunc()
+	tbl := table.New("PR", "Author", "Description", "URL")
+	tbl.WithFirstColumnFormatter(columnFmt)
 
 	// Check to ensure we are in a git repo, if we are not, exit!
 	chkr := exec.Command(gc, "-C", wd, "status")
@@ -58,11 +79,11 @@ func main() {
 
 	// Output what we are about to do
 	cmdLog = fmt.Sprintf("Determining merged branches between the following hashes: %s %s", a[1], a[2])
-	fmt.Println(cmdLog)
+	fmt.Print(cmdLog)
 
 	// Determine the merged branches between the two hashes
-	c := exec.Command(gc, "-C", wd, "log", "--merges", "--pretty=format:\"%s\"", a[1]+"..."+a[2])
-
+	marg := fmt.Sprintf("%s...%s", a[1], a[2])
+	c := exec.Command(gc, "-C", wd, "log", "--merges", "--pretty=format:\"%s\"", marg)
 	out, err := c.StdoutPipe()
 	if err != nil {
 		log.Fatal(err)
@@ -75,11 +96,9 @@ func main() {
 
 	// iteratre through matcthes, and pull out the issues id into a slice
 	var ids []int
-
 	s := bufio.NewScanner(out)
 	for s.Scan() {
 		t := s.Text()
-		// fmt.Println(t)
 		r, _ := regexp.Compile("#([0-9]+)")
 		sm := r.FindStringSubmatch(t)
 		if len(sm) > 0 {
@@ -101,40 +120,43 @@ func main() {
 	}
 
 	// curl github api to get the contents of the PR
-
+	// at present, add it to a table row and output
 	var lines []string
-
 	for _, iid := range ids {
-		fmt.Println(iid)
-		pr, _, err := client.PullRequests.Get(gho, ghr, iid)
+		pr, _, err := client.PullRequests.Get(gho, repo, iid)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		// pull out a lot of values, content, name
-		i := *pr.Number
-		u := *pr.User.Login
-		t := *pr.Title
+		i := fmt.Sprintf("#%d", *pr.Number)
+		u := fmt.Sprintf("@%s", *pr.User.Login)
+		t := fmt.Sprintf("%s", *pr.Title)
+		l := fmt.Sprintf("http://github.com/%s/%s/pull/%d", gho, repo, *pr.Number)
 
-		// pr link
-		l := fmt.Sprintf("http://github.com/%s/%s/pull/%d", gho, ghr, i)
-
-		tmpstr := fmt.Sprintf("#%d (@%s): %s (%s)", i, u, t, l)
-
-		// push output into an array
-		// tmpstr := "#" + strconv.Itoa(i) + " (@" + u + "): " + t + " (" + l + ")"
+		tmpstr := fmt.Sprintf("%s (%s): %s (%s)", i, u, t, l)
 		lines = append(lines, tmpstr)
+
+		tbl.AddRow(i, u, t, l)
 	}
 
-	fmt.Println(lines)
-
-	// notify slack
+	// Output results
+	tbl.Print()
 }
 
-const usage = `
-merged-prs <HASH> <HASH>
+const usage = `Script can be used within a Git repository between any two hashes, tags, or branches
+
+$ merged-prs <PREV> <NEW>
+
+User should specify the older revision first ie. merging dev into master would necessitate that master is the older commit, and dev is the newer
+
+$ merged-prs master dev
+Determining merged branches between the following hashes: master dev
+PR   Author    Description              URL
+#55  @lucas    Typo 100 vs 1000         http://github.com/promiseofcake/foo/pull/55
+#54  @lucas    LRU Cache Store Results  http://github.com/promiseofcake/foo/pull/54
 `
 
 func showUsage() {
 	fmt.Println(usage)
+	os.Exit(1)
 }
