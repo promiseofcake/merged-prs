@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
@@ -32,17 +33,6 @@ func main() {
 	tc := oauth2.NewClient(oauth2.NoContext, ts)
 
 	client := github.NewClient(tc)
-
-	pr, _, err := client.PullRequests.Get(gho, ghr, 50)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(*pr.Title)
-	fmt.Println(*pr.Body)
-
-	log.Fatal("Testing GitHub")
-	os.Exit(1)
 
 	var cmdLog string
 
@@ -84,15 +74,20 @@ func main() {
 	}
 
 	// iteratre through matcthes, and pull out the issues id into a slice
-	var ids []string
+	var ids []int
 
 	s := bufio.NewScanner(out)
 	for s.Scan() {
 		t := s.Text()
-		fmt.Println(t)
+		// fmt.Println(t)
 		r, _ := regexp.Compile("#([0-9]+)")
 		sm := r.FindStringSubmatch(t)
-		ids = append(ids, sm[1])
+		if len(sm) > 0 {
+			i, err := strconv.Atoi(sm[1])
+			if err == nil {
+				ids = append(ids, i)
+			}
+		}
 	}
 	err = c.Wait()
 	if err != nil {
@@ -107,9 +102,31 @@ func main() {
 
 	// curl github api to get the contents of the PR
 
-	// pull out a lot of values, content, name
+	var lines []string
 
-	// push output into an array
+	for _, iid := range ids {
+		fmt.Println(iid)
+		pr, _, err := client.PullRequests.Get(gho, ghr, iid)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		// pull out a lot of values, content, name
+		i := *pr.Number
+		u := *pr.User.Login
+		t := *pr.Title
+
+		// pr link
+		l := fmt.Sprintf("http://github.com/%s/%s/pull/%d", gho, ghr, i)
+
+		tmpstr := fmt.Sprintf("#%d (@%s): %s (%s)", i, u, t, l)
+
+		// push output into an array
+		// tmpstr := "#" + strconv.Itoa(i) + " (@" + u + "): " + t + " (" + l + ")"
+		lines = append(lines, tmpstr)
+	}
+
+	fmt.Println(lines)
 
 	// notify slack
 }
