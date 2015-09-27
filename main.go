@@ -2,8 +2,10 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -31,6 +33,7 @@ func main() {
 	var err error
 	var cmdLog string
 	var repopath, repo string
+	var test bool
 
 	// Get token configuration
 	ght := os.Getenv(tokenVar)
@@ -42,6 +45,7 @@ func main() {
 	// Get command line arguments
 	wd, _ := os.Getwd()
 	flag.StringVar(&repopath, "path", wd, "Path to git repo")
+	flag.BoolVar(&test, "test", false, "Run command in test mode (do not notify Slack)")
 	flag.Parse()
 
 	// Get remaining arguments
@@ -150,7 +154,23 @@ func main() {
 	}
 
 	// Output results
+	header := fmt.Sprintf("Merged PRs between the following refs: %s %s", ref1, ref2)
+	fmt.Print(header)
 	tbl.Print()
+
+	// Prepare to send to Slack
+	if !test {
+		buf := new(bytes.Buffer)
+
+		_, err := io.WriteString(buf, header)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		tbl.WithWriter(buf)
+		tbl.Print()
+		fmt.Println(buf.String())
+	}
 }
 
 const usage = `Script can be used within a Git repository between any two hashes, tags, or branches
