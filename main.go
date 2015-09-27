@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -19,7 +20,6 @@ import (
 const (
 	gc       = "git"
 	tokenVar = "MPR_GITHUB_TOKEN"
-	wd       = "/Users/lucas/Workspace/Work/vsco/image"
 )
 
 const (
@@ -30,6 +30,7 @@ func main() {
 
 	var err error
 	var cmdLog string
+	var repopath, repo string
 
 	// Get token configuration
 	ght := os.Getenv(tokenVar)
@@ -38,16 +39,24 @@ func main() {
 		log.Fatal(cmdLog)
 	}
 
-	// Set or get the current working directory
-	// wd, _ := os.Getwd()
-	repo := path.Base(wd)
+	// Get command line arguments
+	wd, _ := os.Getwd()
+	flag.StringVar(&repopath, "path", wd, "Path to git repo")
+	flag.Parse()
 
-	// ensure enough arguments were passed
-	a := os.Args
-	if len(a) <= 2 {
+	// Get remaining arguments
+	a := flag.Args()
+	if len(a) < 2 {
 		showUsage()
 		os.Exit(1)
 	}
+
+	// Store refs
+	ref1 := a[0]
+	ref2 := a[1]
+
+	// Derive repo from the path
+	repo = path.Base(repopath)
 
 	// Determine that Git is installed
 	gchk := exec.Command(gc, "--version")
@@ -69,21 +78,21 @@ func main() {
 	tbl := table.New("PR", "Author", "Description", "URL")
 	tbl.WithFirstColumnFormatter(columnFmt)
 
-	// Check to ensure we are in a git repo, if we are not, exit!
-	chkr := exec.Command(gc, "-C", wd, "status")
+	// Check to ensure our path is a Git repo, if not exit!
+	chkr := exec.Command(gc, "-C", repopath, "status")
 	err = chkr.Run()
 	if err != nil {
-		cmdLog = fmt.Sprintf("%s is not a valid git repository! Exiting", wd)
+		cmdLog = fmt.Sprintf("%s is not a valid git repository! Exiting", repopath)
 		log.Fatal(cmdLog)
 	}
 
 	// Output what we are about to do
-	cmdLog = fmt.Sprintf("Determining merged branches between the following hashes: %s %s", a[1], a[2])
+	cmdLog = fmt.Sprintf("Determining merged branches between the following hashes: %s %s", ref1, ref2)
 	fmt.Print(cmdLog)
 
 	// Determine the merged branches between the two hashes
-	marg := fmt.Sprintf("%s...%s", a[1], a[2])
-	c := exec.Command(gc, "-C", wd, "log", "--merges", "--pretty=format:\"%s\"", marg)
+	marg := fmt.Sprintf("%s...%s", ref1, ref2)
+	c := exec.Command(gc, "-C", repopath, "log", "--merges", "--pretty=format:\"%s\"", marg)
 	out, err := c.StdoutPipe()
 	if err != nil {
 		log.Fatal(err)
@@ -115,8 +124,9 @@ func main() {
 
 	// if the list is empty, error out
 	if len(ids) == 0 {
-		cmdLog = fmt.Sprintf("No merged PRs / GH issues found between: %s %s", a[1], a[2])
-		log.Fatal(cmdLog)
+		cmdLog = fmt.Sprintf("No merged PRs / GH issues found between: %s %s", ref1, ref2)
+		fmt.Println(cmdLog)
+		os.Exit(2)
 	}
 
 	// curl github api to get the contents of the PR
