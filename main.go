@@ -95,7 +95,7 @@ func main() {
 	fmt.Print(cmdLog)
 
 	// Determine the merged branches between the two hashes
-	marg := fmt.Sprintf("%s...%s", ref1, ref2)
+	marg := fmt.Sprintf("%s..%s", ref1, ref2)
 	c := exec.Command(gc, "-C", repopath, "log", "--merges", "--pretty=format:\"%s\"", marg)
 	out, err := c.StdoutPipe()
 	if err != nil {
