@@ -12,7 +12,14 @@ import (
 
 	"bytes"
 
+	"strings"
+
 	"github.com/rodaine/table"
+)
+
+const (
+	gitHubRoot = "http://github.com"
+	gc         = "git"
 )
 
 func main() {
@@ -30,14 +37,10 @@ func main() {
 	repo := path.Base(repopath)
 
 	// Determine that Git is installed
-	err = checkForGit()
-	if err != nil {
-		cmdLog = fmt.Sprintf("%s is not a valid git application, exiting.", gc)
-		log.Fatal(cmdLog)
-	}
+	checkForGit()
 
 	// Auth with GitHub
-	client := authWithGitHub(config.GithubToken)
+	client := authWithGitHub(config.Github.Token)
 
 	// define table output
 	tbl := table.New("PR", "Author", "Description", "URL")
@@ -46,7 +49,7 @@ func main() {
 	checkPathIsGitRepo(repopath)
 
 	// Output what we are about to do
-	cmdLog = fmt.Sprintf("Determining merged branches between the following hashes: %s %s", ref1, ref2)
+	cmdLog = fmt.Sprintf("Determining merged branches between the following hashes: %s %s \n", ref1, ref2)
 	fmt.Println(cmdLog)
 
 	// Determine the merged branches between the two hashes
@@ -83,16 +86,15 @@ func main() {
 
 	// if the list is empty, error out
 	if len(ids) == 0 {
-		cmdLog = fmt.Sprintf("No merged PRs / GH issues found between: %s %s", ref1, ref2)
+		cmdLog = fmt.Sprintf("No merged PRs / GitHub issues found between: %s %s", ref1, ref2)
 		fmt.Println(cmdLog)
 		os.Exit(2)
 	}
 
-	// curl github api to get the contents of the PR
-	// at present, add it to a table row and output
+	// Call GitHub API to get the contents of the individual PRs and add as Rows to the Table
 	var lines []string
 	for _, iid := range ids {
-		pr, _, err := client.PullRequests.Get(config.GithubOrg, repo, iid)
+		pr, _, err := client.PullRequests.Get(config.Github.Org, repo, iid)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -100,7 +102,7 @@ func main() {
 		i := fmt.Sprintf("#%d", *pr.Number)
 		u := fmt.Sprintf("@%s", *pr.User.Login)
 		t := fmt.Sprintf("%s", *pr.Title)
-		l := fmt.Sprintf("http://github.com/%s/%s/pull/%d", config.GithubOrg, repo, *pr.Number)
+		l := fmt.Sprintf("%s/%s/%s/pull/%d", gitHubRoot, config.Github.Org, repo, *pr.Number)
 
 		tmpstr := fmt.Sprintf("%s (%s): %s (%s)", i, u, t, l)
 		lines = append(lines, tmpstr)
@@ -108,17 +110,17 @@ func main() {
 		tbl.AddRow(i, u, t, l)
 	}
 
-	// Output results / Send to Slack
+	// Generate results output
 	output := new(bytes.Buffer)
 	tbl.WithWriter(output)
-	output.WriteString(fmt.Sprintf("Merged PRs between the following refs: %s %s", ref1, ref2))
+	output.WriteString(fmt.Sprintf("%s: Merged GitHub PRs between the following refs: %s %s", strings.ToUpper(repo), ref1, ref2))
 	tbl.Print()
 
-	// print the merge message
+	// Print the merge message to console and notifies slack
 	mergedMessage := output.String()
 	fmt.Println(mergedMessage)
 	if !testMode {
-		notifySlack(mergedMessage, config.SlackWebhook, config.SlackChannel)
+		notifySlack(mergedMessage, config.Slack)
 	}
 }
 
@@ -130,6 +132,8 @@ User should specify the older revision first ie. merging dev into master would n
 
 $ merged-prs master dev
 Determining merged branches between the following hashes: master dev
+
+REPO: Merged GitHub PRs between the following refs: master dev
 PR   Author    Description              URL
 #55  @lucas    Typo 100 vs 1000         http://github.com/promiseofcake/foo/pull/55
 #54  @lucas    LRU Cache Store Results  http://github.com/promiseofcake/foo/pull/54

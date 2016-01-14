@@ -7,10 +7,6 @@ import (
 	"os/exec"
 )
 
-const (
-	gc = "git"
-)
-
 func parseArgs() (string, string) {
 	a := flag.Args()
 	if len(a) < 2 {
@@ -34,9 +30,12 @@ func parseFlags() (string, bool) {
 	return path, test
 }
 
-func checkForGit() error {
-	gchk := exec.Command(gc, "--version")
-	return gchk.Run()
+func checkForGit() {
+	check := exec.Command(gc, "--version")
+	err := check.Run()
+	if err != nil {
+		log.Fatalf("%s is not a valid git application, exiting.", gc)
+	}
 }
 
 func checkPathIsGitRepo(repopath string) {
