@@ -23,20 +23,35 @@ Configuration file must exist at $HOME/.merged-prs. It is where your GitHub toke
 Example config:
 
 // ~/.merged-prs
-githubtoken  = "foo"
-githuborg    = "vsco"
-slackwebhook = "https://hooks.slack.com/services/foo/bar/baz"
-slackchannel = "#platform"
+GitHub {
+	Token = "foo"
+	Org = "vsco"
+}
+
+Slack {
+	WebhookURL = "https://hooks.slack.com/services/foo/bar/baz"
+	Channel  = "#platform"
+	Emoji  = ":shipit:"
+}
 
 Once this is generated the script will work.
 `
 
-// Config struct usable through application
+type githubConfig struct {
+	Token string
+	Org   string
+}
+
+type slackConfig struct {
+	WebhookURL string
+	Channel    string
+	Emoji      string
+}
+
+// Config is general configuration used throughout the applicaiton
 type Config struct {
-	GithubToken  string
-	GithubOrg    string
-	SlackWebhook string
-	SlackChannel string
+	Github githubConfig
+	Slack  slackConfig
 }
 
 func initConfig() Config {
