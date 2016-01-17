@@ -14,6 +14,7 @@ import (
 
 	"strings"
 
+	"github.com/google/go-github/github"
 	"github.com/rodaine/table"
 )
 
@@ -91,22 +92,14 @@ func main() {
 		os.Exit(2)
 	}
 
-	// Call GitHub API to get the contents of the individual PRs and add as Rows to the Table
-	var lines []string
-	for _, iid := range ids {
-		pr, _, err := client.PullRequests.Get(config.Github.Org, repo, iid)
-		if err != nil {
-			log.Fatal(err)
-		}
+	// Get info from GitHub (experiment with concurrency)
+	pulls := processPullRequests(ids, client, config, repo)
 
-		i := fmt.Sprintf("#%d", *pr.Number)
-		u := fmt.Sprintf("@%s", *pr.User.Login)
-		t := fmt.Sprintf("%s", *pr.Title)
-		l := fmt.Sprintf("%s/%s/%s/pull/%d", gitHubRoot, config.Github.Org, repo, *pr.Number)
-
-		tmpstr := fmt.Sprintf("%s (%s): %s (%s)", i, u, t, l)
-		lines = append(lines, tmpstr)
-
+	for _, pull := range pulls {
+		i := fmt.Sprintf("#%d", *pull.Number)
+		u := fmt.Sprintf("@%s", *pull.User.Login)
+		t := fmt.Sprintf("%s", *pull.Title)
+		l := fmt.Sprintf("%s/%s/%s/pull/%d", gitHubRoot, config.Github.Org, repo, *pull.Number)
 		tbl.AddRow(i, u, t, l)
 	}
 
@@ -122,6 +115,38 @@ func main() {
 	if !testMode {
 		notifySlack(mergedMessage, config.Slack)
 	}
+}
+
+// Function to go to GetHub and process the passed pull requests
+func processPullRequests(ids []int, client *github.Client, config Config, repo string) []*github.PullRequest {
+
+	jobs := make(chan *github.PullRequest)
+
+	// List of Pull Requests
+	pulls := []*github.PullRequest{}
+
+	for _, item := range ids {
+		go func(client *github.Client, org string, r string, id int) {
+			pr, _, err := client.PullRequests.Get(org, r, id)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			jobs <- pr
+
+		}(client, config.Github.Org, repo, item)
+	}
+
+	for {
+		select {
+		case pull := <-jobs:
+			pulls = append(pulls, pull)
+			if len(pulls) == len(ids) {
+				return pulls
+			}
+		}
+	}
+	return pulls
 }
 
 const usage = `Script can be used within a Git repository between any two hashes, tags, or branches
