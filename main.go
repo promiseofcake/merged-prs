@@ -14,6 +14,8 @@ import (
 
 	"strings"
 
+	"sync"
+
 	"github.com/google/go-github/github"
 	"github.com/rodaine/table"
 )
@@ -120,7 +122,9 @@ func main() {
 // Function to go to GetHub and process the passed pull requests
 func processPullRequests(ids []int, client *github.Client, config Config, repo string) []*github.PullRequest {
 
-	jobs := make(chan *github.PullRequest)
+	var wg sync.WaitGroup
+	jobs := make(chan *github.PullRequest, len(ids))
+	wg.Add(len(ids))
 
 	// List of Pull Requests
 	pulls := []*github.PullRequest{}
@@ -129,23 +133,23 @@ func processPullRequests(ids []int, client *github.Client, config Config, repo s
 		go func(client *github.Client, org string, r string, id int) {
 			pr, _, err := client.PullRequests.Get(org, r, id)
 			if err != nil {
-				log.Fatal(err)
+				log.Printf("Error retrieving pull request: %d, %v", id, err)
+				wg.Done()
+				return
 			}
 
 			jobs <- pr
-
+			wg.Done()
 		}(client, config.Github.Org, repo, item)
 	}
 
-	for {
-		select {
-		case pull := <-jobs:
-			pulls = append(pulls, pull)
-			if len(pulls) == len(ids) {
-				return pulls
-			}
-		}
+	wg.Wait()
+	close(jobs)
+
+	for pull := range jobs {
+		pulls = append(pulls, pull)
 	}
+
 	return pulls
 }
 
