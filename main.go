@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"log"
 	"os"
@@ -9,11 +10,7 @@ import (
 	"path"
 	"regexp"
 	"strconv"
-
-	"bytes"
-
 	"strings"
-
 	"sync"
 
 	"github.com/google/go-github/github"
@@ -33,7 +30,15 @@ func main() {
 	config := initConfig()
 
 	// Get command line arguments and store args as refs
-	repopath, testMode := parseFlags()
+	f := parseFlags()
+
+	repopath := *f.Path
+
+	// Override the default slack channel if flag is passed in
+	if *f.SlackChannel != "" {
+		config.Slack.Channel = *f.SlackChannel
+	}
+
 	ref1, ref2 := parseArgs()
 
 	// Derive repo from the path
@@ -55,8 +60,14 @@ func main() {
 	cmdLog = fmt.Sprintf("Determining merged branches between the following hashes: %s %s \n", ref1, ref2)
 	fmt.Println(cmdLog)
 
+	// Strict vs loose comparison based upon dev branch paradigm
+	comparison := "..."
+	if *f.Dev {
+		comparison = ".."
+	}
+
 	// Determine the merged branches between the two hashes
-	marg := fmt.Sprintf("%s..%s", ref1, ref2)
+	marg := fmt.Sprintf("%s%s%s", ref1, comparison, ref2)
 	c := exec.Command(gc, "-C", repopath, "log", "--merges", "--pretty=format:\"%s\"", marg)
 	out, err := c.StdoutPipe()
 	if err != nil {
@@ -114,7 +125,7 @@ func main() {
 	// Print the merge message to console and notifies slack
 	mergedMessage := output.String()
 	fmt.Println(mergedMessage)
-	if !testMode {
+	if !*f.Test {
 		notifySlack(mergedMessage, config.Slack)
 	}
 }
