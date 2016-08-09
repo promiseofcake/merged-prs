@@ -4,7 +4,7 @@ merged-prs is a go tool to assit in determining differences between git hashes b
 
 ## Requirements
 
-- Go 1.5
+- Go 1.6
 - GPM
 - Git
 - GitHub
@@ -14,8 +14,8 @@ merged-prs is a go tool to assit in determining differences between git hashes b
 
 - Built in Go
 - Given a set of git hashes, a list of merged GitHub Pull Requests will be retrieved and parsed.
-- List will be output to console contining the PR #, Author, Summary, and a link to the PR
-- If Slack credentials are configured, a notification will be sent to the channel of your choosing
+- List will be output to console containing the PR #, Author, Summary, and a link to the PR
+- If Slack credentials are configured, a notification will be sent to the channel of your choosing (from config, or override)
 
 ## Configuration
 
@@ -59,15 +59,16 @@ Calling the `merged-prs` tool will act in the current directory's context.
 
 ```
 # Runtime Flags
-  -test <do not notify Slack, only output to console>
-  -path <Specify path to repo in order to use outside the context of a repo>
-
+  -path       <Specify path to repo in order to use outside the context of a repo>
+  -dev=false  <Ignore the git-flow dev branch paradigm (loose comparison "...")>
+  -test       <Do not notify Slack, only output to console>
+  -c          <Override default slack notification channel>
 ```
 
 ### Example
 
 ```
-# merged-prs [-test] [-path /path/to/repo] [Previous Git Hash] [Current Git Hash]
+# merged-prs [-test] [-c @lucas] [-dev=false] [-path /path/to/repo] [Previous Git Hash] [Current Git Hash]
 # User should specify the older revision first ie. merging `dev` into `master` would necessitate that `master` is the older commit, and `dev` is the newer
 
 $ merged-prs master dev
