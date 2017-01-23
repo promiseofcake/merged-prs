@@ -5,7 +5,7 @@ merged-prs is a go tool to assit in determining differences between git hashes b
 ## Requirements
 
 - Go 1.6
-- GPM
+- Glide
 - Git
 - GitHub
 - Slack (optional)
@@ -47,7 +47,7 @@ In order to use the `merged-prs` tool one should use `go get`
 ```
 go get github.com/promiseofcake/merged-prs
 cd $GOPATH/src/github.com/promiseofcake/merged-prs
-gpm install
+glide install
 go install
 ```
 
