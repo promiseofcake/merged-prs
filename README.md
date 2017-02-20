@@ -1,6 +1,6 @@
 # merged-prs
 
-merged-prs is a go tool to assit in determining differences between git hashes based upon the GitHub PR as the vechicle for change.
+merged-prs is a go tool to assist in determining differences between git hashes based upon the GitHub PR as the vechicle for change.
 
 ## Requirements
 
