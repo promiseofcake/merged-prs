@@ -1,25 +1,30 @@
 # merged-prs
 
-merged-prs is a go tool to assist in determining differences between git hashes based upon the GitHub PR as the vechicle for change.
+merged-prs is a go tool to assist in determining differences between git hashes
+based upon the GitHub PR as the vehicle for change.
 
 ## Requirements
 
-- Go 1.6
-- Glide
-- Git
-- GitHub
-- Slack (optional)
+* Go 1.7
+* Dep
+* Git
+* GitHub
+* Slack (optional)
 
 ## Features
 
-- Built in Go
-- Given a set of git hashes, a list of merged GitHub Pull Requests will be retrieved and parsed.
-- List will be output to console containing the PR #, Author, Summary, and a link to the PR
-- If Slack credentials are configured, a notification will be sent to the channel of your choosing (from config, or override)
+* Built in Go
+* Given a set of git hashes, a list of merged GitHub Pull Requests will be
+  retrieved and parsed.
+* List will be output to console containing the PR #, Author, Summary, and a
+  link to the PR
+* If Slack credentials are configured, a notification will be sent to the
+  channel of your choosing (from config, or override)
 
 ## Configuration
 
-A `.merged-prs` configuration file must be created in your `$HOME` directory. This configuration uses [HashiCorp's HCL Syntax](https://github.com/hashicorp/hcl#syntax).
+A `.merged-prs` configuration file must be created in your `$HOME` directory.
+This configuration uses [HashiCorp's HCLSyntax](https://github.com/hashicorp/hcl#syntax).
 Using the example configuration below create a file in `~/.merged-prs`
 
 *Example Config*
@@ -44,11 +49,8 @@ Slack {
 
 In order to use the `merged-prs` tool one should use `go get`
 
-```
+```bash
 go get github.com/promiseofcake/merged-prs
-cd $GOPATH/src/github.com/promiseofcake/merged-prs
-glide install
-go install
 ```
 
 ## Usage
@@ -57,7 +59,7 @@ Calling the `merged-prs` tool will act in the current directory's context.
 
 ### Flags
 
-```
+```bash
 # Runtime Flags
   -path       <Specify path to repo in order to use outside the context of a repo>
   -dev=false  <Ignore the git-flow dev branch paradigm (loose comparison "...")>
@@ -67,7 +69,7 @@ Calling the `merged-prs` tool will act in the current directory's context.
 
 ### Example
 
-```
+```bash
 # merged-prs [-test] [-c @lucas] [-dev=false] [-path /path/to/repo] [Previous Git Hash] [Current Git Hash]
 # User should specify the older revision first ie. merging `dev` into `master` would necessitate that `master` is the older commit, and `dev` is the newer
 
