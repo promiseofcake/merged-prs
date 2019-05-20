@@ -1,0 +1,23 @@
+[[constraint]]
+  name = "github.com/google/go-github"
+  version = "25.0.4"
+
+[[constraint]]
+  name = "github.com/hashicorp/hcl"
+  version = "1.0.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/lytics/slackhook"
+
+[[constraint]]
+  name = "github.com/rodaine/table"
+  version = "1.0.0"
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/oauth2"
+
+[prune]
+  go-tests = true
+  unused-packages = true

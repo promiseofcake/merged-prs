@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -142,7 +143,7 @@ func processPullRequests(ids []int, client *github.Client, config Config, repo s
 
 	for _, item := range ids {
 		go func(client *github.Client, org string, r string, id int) {
-			pr, _, err := client.PullRequests.Get(org, r, id)
+			pr, _, err := client.PullRequests.Get(context.TODO(), org, r, id)
 			if err != nil {
 				log.Printf("Error retrieving pull request: %d, %v", id, err)
 				wg.Done()

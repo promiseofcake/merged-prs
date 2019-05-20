@@ -1,15 +1,11 @@
 package main
 
 import (
-	"log"
-
-	"os"
-
-	"io/ioutil"
-
-	"path/filepath"
-
 	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
 
 	"github.com/hashicorp/hcl"
 )
@@ -34,8 +30,7 @@ Slack {
 	Emoji  = ":shipit:"
 }
 
-Once this is generated the script will work.
-`
+Once this is generated the script will work.`
 
 type githubConfig struct {
 	Token string
