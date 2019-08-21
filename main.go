@@ -141,6 +141,7 @@ func processPullRequests(ids []int, client *github.Client, config Config, repo s
 	// List of Pull Requests
 	pulls := []*github.PullRequest{}
 
+	// TODO: add backoff mechanism
 	for _, item := range ids {
 		go func(client *github.Client, org string, r string, id int) {
 			pr, _, err := client.PullRequests.Get(context.TODO(), org, r, id)
