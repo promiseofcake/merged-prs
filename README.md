@@ -5,7 +5,7 @@ based upon the GitHub PR as the vehicle for change.
 
 ## Requirements
 
-* Go 1.7
+* Go 1.12 (lower may work)
 * Dep
 * Git
 * GitHub
